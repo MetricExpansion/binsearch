@@ -19,14 +19,14 @@ impl FloatRun {
         (self.address as usize) - (base as usize)
     }
 }
-pub fn float_run<F: Fn(f32) -> bool + Clone>(
+pub fn float_run<F: Fn(f32) -> bool>(
     input: &[u8],
     min_length: usize,
     condition: F
 ) -> IResult<&[u8], FloatRun, FloatSearchError<&[u8]>> {
     preceded(
-        |x| run_of_invalid_items(x, min_length, condition.clone()),
-        consumed(|x| run_of_valid_floats(x, condition.clone())),
+        |x| run_of_invalid_items(x, min_length, &condition),
+        consumed(|x| run_of_valid_floats(x, &condition)),
     )(input)
     .map(|(remain, (consumed, values))| {
         (
@@ -39,31 +39,31 @@ pub fn float_run<F: Fn(f32) -> bool + Clone>(
     })
 }
 
-fn run_of_valid_floats<F: Fn(f32) -> bool + Clone>(input: &[u8], condition: F) -> IResult<&[u8], Vec<f32>, FloatSearchError<&[u8]>> {
-    many1(|x| valid_f32(x, condition.clone()))(input)
+fn run_of_valid_floats<F: Fn(f32) -> bool>(input: &[u8], condition: F) -> IResult<&[u8], Vec<f32>, FloatSearchError<&[u8]>> {
+    many1(|x| valid_f32(x, &condition))(input)
 }
 
-fn run_of_invalid_items<F: Fn(f32) -> bool + Clone>(
+fn run_of_invalid_items<F: Fn(f32) -> bool>(
     input: &[u8],
     min_length: usize,
     condition: F
 ) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
     fold_many0(
         alt((
-            |x| optional_too_short_run_of_valid_floats(x, min_length, condition.clone()),
-            |x| optional_run_of_invalid_floats(x, condition.clone()),
+            |x| optional_too_short_run_of_valid_floats(x, min_length, &condition),
+            |x| optional_run_of_invalid_floats(x, &condition),
         )),
         (),
         |_, _| (),
     )(input)
 }
 
-fn optional_too_short_run_of_valid_floats<F: Fn(f32) -> bool + Clone>(
+fn optional_too_short_run_of_valid_floats<F: Fn(f32) -> bool>(
     input: &[u8],
     min_length: usize,
     condition: F
 ) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
-    many1_count(|x| valid_f32(x, condition.clone()))(input).and_then(|(remaining, length)| {
+    many1_count(|x| valid_f32(x, &condition))(input).and_then(|(remaining, length)| {
         if length < min_length {
             Ok((remaining, ()))
         } else {
@@ -72,9 +72,9 @@ fn optional_too_short_run_of_valid_floats<F: Fn(f32) -> bool + Clone>(
     })
 }
 
-fn optional_run_of_invalid_floats<F: Fn(f32) -> bool + Clone>(input: &[u8], condition: F) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
+fn optional_run_of_invalid_floats<F: Fn(f32) -> bool>(input: &[u8], condition: F) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
     // Use fold with fake init and accumulator because we just want to consume the input and throw it away without heap allocations.
-    fold_many1(preceded(not(|x| valid_f32(x, condition.clone())), take(4 as usize)), (), |_, _| ())(input)
+    fold_many1(preceded(not(|x| valid_f32(x, &condition)), take(4 as usize)), (), |_, _| ())(input)
 }
 
 pub fn valid_f32<F: Fn(f32) -> bool>(input: &[u8], condition: F) -> IResult<&[u8], f32, FloatSearchError<&[u8]>> {
@@ -105,7 +105,7 @@ mod tests {
     fn early_eof_with_some_valid_input() {
         // Initial test.
         let bytes = vec![0x32, 0x32, 0x32, 0x32, 0x32, 0x32, 0x32, 0x32, 0x32];
-        let result = float_run(bytes.as_slice(), 2);
+        let result = float_run(bytes.as_slice(), 2, |x| x > 0.0);
         match result {
             Ok((remaining_input, x)) => {
                 println!(
@@ -125,7 +125,7 @@ mod tests {
     fn early_eof_no_input() {
         // Initial test.
         let bytes = vec![0x32, 0x32, 0x32];
-        let result = float_run(bytes.as_slice(), 0);
+        let result = float_run(bytes.as_slice(), 0, |x| x > 0.0);
         match result {
             Ok((remaining_input, x)) => {
                 println!(
@@ -147,7 +147,7 @@ mod tests {
         let bytes = vec![
             0x32, 0x32, 0x32, 0x32, 0, 0, 160, 193, 0x32, 0x32, 0x32, 0x32,
         ];
-        let result = float_run(bytes.as_slice(), 0);
+        let result = float_run(bytes.as_slice(), 0, |x| x > 0.0);
         let remaining_input = match result {
             Ok((remaining_input, x)) => {
                 println!(
@@ -162,7 +162,7 @@ mod tests {
                 panic!("This test should pass!");
             }
         };
-        let result = float_run(remaining_input, 0);
+        let result = float_run(remaining_input, 0, |x| x > 0.0);
         match result {
             Ok((remaining_input, x)) => {
                 println!(
@@ -182,7 +182,7 @@ mod tests {
     fn invalid_then_valid_then_invalid() {
         // Initial test.
         let bytes = vec![0, 0, 160, 193, 0x32, 0x32, 0x32, 0x32, 0, 0, 160, 193];
-        let remaining_input = match float_run(bytes.as_slice(), 0) {
+        let remaining_input = match float_run(bytes.as_slice(), 0, |x| x > 0.0) {
             Ok((remaining_input, x)) => {
                 println!(
                     "TEST: Got {:?} with {} bytes of unconsumed input.",
