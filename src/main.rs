@@ -1,10 +1,7 @@
 use alloc_counter::{count_alloc, AllocCounterSystem};
+use memmap::{Mmap, MmapOptions};
 use rand::Rng;
-use std::{
-    fs::File,
-    io::{BufReader, Read},
-    path::PathBuf,
-};
+use std::{fs::File, ops::Deref, path::PathBuf};
 use structopt::StructOpt;
 
 #[global_allocator]
@@ -41,16 +38,34 @@ struct Opt {
     min_length: usize,
 }
 
+enum DataSource {
+    Mmap(Mmap),
+    Vec(Vec<u8>),
+}
+
+impl Deref for DataSource {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            DataSource::Mmap(mmap) => &*mmap,
+            DataSource::Vec(vec) => &vec[..],
+        }
+    }
+}
+
 fn main() {
     let opt = Opt::from_args();
 
     let bytes = if let Some(path) = &opt.input {
         println!("Loading {}", path.to_str().unwrap_or_else(|| "file."));
-        let mut file = BufReader::new(File::open(path).expect("Could not find input file."));
-        let mut data = Vec::new();
-        file.read_to_end(&mut data)
-            .expect("Could not read input file.");
-        data
+        let file = File::open(path).expect("Could not find input file.");
+        let mmap = unsafe {
+            MmapOptions::new()
+                .map(&file)
+                .expect("Could not read input file.")
+        };
+        DataSource::Mmap(mmap)
     } else {
         // Set up example data.
         println!(
@@ -68,13 +83,13 @@ fn main() {
             .map(|f| unsafe { std::mem::transmute::<f32, [u8; 4]>(f) })
             .flatten()
             .collect();
-        bytes
+        DataSource::Vec(bytes)
     };
 
     // And let's test the parser...
     println!("Searching in {} bytes of data.", bytes.len());
     let (counts, v) = count_alloc(|| {
-        main_data_search(bytes.as_slice(), opt.min, opt.max, opt.min_length);
+        main_data_search(&*bytes, opt.min, opt.max, opt.min_length);
     });
     eprintln!("Allocations: {:?}", counts);
     return v;
