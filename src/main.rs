@@ -9,7 +9,7 @@ static A: AllocCounterSystem = AllocCounterSystem;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
-    name = "pcheck",
+    name = "binsearch",
     about = "A tool to find single-precision floating point numbers inside of binary data."
 )]
 struct Opt {

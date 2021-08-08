@@ -50,6 +50,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "binsearch"
+version = "0.1.0"
+dependencies = [
+ "alloc_counter",
+ "cversion",
+ "floatrun",
+ "memmap",
+ "nom",
+ "rand",
+ "structopt",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -193,19 +206,6 @@ dependencies = [
  "lexical-core",
  "memchr",
  "version_check",
-]
-
-[[package]]
-name = "pcheck"
-version = "0.1.0"
-dependencies = [
- "alloc_counter",
- "cversion",
- "floatrun",
- "memmap",
- "nom",
- "rand",
- "structopt",
 ]
 
 [[package]]
