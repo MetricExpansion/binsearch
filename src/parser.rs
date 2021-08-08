@@ -34,7 +34,7 @@ where
             if let Some(valid_range_unwrapped) = valid_range {
                 let length =
                     pos - (valid_range_unwrapped.as_ptr() as usize - input.as_ptr() as usize);
-                if length >= size_of::<f32>() * min_length {
+                if length >= value_size * min_length {
                     let values = valid_range_unwrapped[..length]
                         .chunks(value_size)
                         .map(extractor)
@@ -51,11 +51,11 @@ where
                 }
             }
         }
-        pos += size_of::<f32>();
+        pos += value_size;
     }
     if let Some(valid_range) = valid_range {
         let length = pos - (valid_range.as_ptr() as usize - input.as_ptr() as usize);
-        if length >= size_of::<f32>() * min_length {
+        if length >= value_size * min_length {
             let values = valid_range[..length]
                 .chunks(value_size)
                 .map(extractor)
