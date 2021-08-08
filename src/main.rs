@@ -22,7 +22,7 @@ struct Opt {
     #[structopt(
         long,
         default_value = "1048576",
-        conflicts_with("input"),
+        // conflicts_with("input"),
         help = "If no file provided, the number of floats to generate as sample data."
     )]
     sample_data_length: usize,
