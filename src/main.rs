@@ -44,7 +44,11 @@ struct Opt {
     )]
     max: Option<f32>,
 
-    #[structopt(long, help = "Select an implementation to use. Choices are Rust, Cpp, and Nom.", default_value = "Rust")]
+    #[structopt(
+        long,
+        help = "Select an implementation to use. Choices are Rust, Cpp, and Nom.",
+        default_value = "Rust"
+    )]
     use_impl: Implementation,
 
     #[structopt(
@@ -108,14 +112,15 @@ fn main() {
     // And let's test the parser...
     println!("Searching in {} bytes of data.", bytes.len());
     let (counts, v) = count_alloc(|| {
+        use Implementation::*;
         match opt.use_impl {
-            Implementation::Rust => {
+            Rust => {
                 main_data_search_rust(&*bytes, opt.min, opt.max, opt.min_length);
             }
-            Implementation::Cpp => {
+            Cpp => {
                 main_data_search_c(&*bytes, opt.min, opt.max, opt.min_length);
             }
-            Implementation::Nom => {
+            Nom => {
                 main_data_search_nom(&*bytes, opt.min, opt.max, opt.min_length);
             }
         };
