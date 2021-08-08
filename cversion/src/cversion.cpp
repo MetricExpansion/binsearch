@@ -18,7 +18,7 @@ void search(const unsigned char** found_range, std::size_t* found_len, const uns
 
     const unsigned char* valid_run_pos = nullptr;
 
-    while (pos < end) {
+    while (pos + 4 <= end) {
         float value = *((float*) pos);
         if (is_valid_value(value, min, max, use_min, use_max)) {
             if (!valid_run_pos) {

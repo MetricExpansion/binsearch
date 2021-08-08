@@ -18,7 +18,7 @@ pub fn float_run_proc<F: Fn(f32) -> bool>(
 ) -> (Option<FloatRun>, &[u8]) {
     let mut valid_range = None;
     let mut pos = 0;
-    while pos < input.len() {
+    while pos + 4 <= input.len() {
         let float = f32::from_le_bytes(input[pos..pos + 4].try_into().unwrap());
         if condition(float) {
             if let None = valid_range {
