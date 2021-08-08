@@ -134,7 +134,7 @@ fn main_data_search_nom(data: &[u8], min: Option<f32>, max: Option<f32>, min_len
     it.for_each(|v| {
         count += 1;
         println!(
-            "{} values at {:?}: {:?}",
+            "{} values at {:#016x?}: {:?}",
             v.values.len(),
             v.index_from_base(data.as_ptr()),
             v.values
@@ -163,7 +163,7 @@ fn main_data_search_c(data: &[u8], min: Option<f32>, max: Option<f32>, min_lengt
         if let Some(v) = value {
             count += 1;
             println!(
-                "{} values at {:?}: {:?}",
+                "{} values at {:#016x?}: {:?}",
                 v.values.len(),
                 v.index_from_base(data.as_ptr()),
                 v.values
@@ -186,7 +186,7 @@ fn main_data_search_rust(data: &[u8], min: Option<f32>, max: Option<f32>, min_le
         if let Some(v) = value {
             count += 1;
             println!(
-                "{} values at {:?}: {:?}",
+                "{} values at {:#016x?}: {:?}",
                 v.values.len(),
                 v.index_from_base(data.as_ptr()),
                 v.values
