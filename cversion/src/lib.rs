@@ -9,7 +9,7 @@ mod c {
     }
 }
 
-pub fn search(data: &[u8], min: Option<f32>, max: Option<f32>, min_length: usize) -> (Option<FloatRun>, &[u8]) {
+pub fn search(data: &[u8], min: Option<f32>, max: Option<f32>, min_length: usize) -> (Option<FloatRun<f32>>, &[u8]) {
     let mut result_ptr: *const u8 = null_mut();
     let mut result_len = 0;
     unsafe {

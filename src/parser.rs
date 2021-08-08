@@ -8,19 +8,25 @@ use nom::number::complete::le_f32;
 use nom::sequence::preceded;
 use nom::Err::Error;
 use nom::IResult;
-use std::convert::TryInto;
 use std::mem::size_of;
 
-pub fn float_run_proc<F: Fn(f32) -> bool>(
+pub fn value_run_proc<V, E, F>(
     input: &[u8],
+    extractor: E,
     min_length: usize,
     condition: F,
-) -> (Option<FloatRun>, &[u8]) {
+) -> (Option<FloatRun<V>>, &[u8])
+where
+    V: Sized,
+    E: Fn(&[u8]) -> V,
+    F: Fn(V) -> bool,
+{
     let mut valid_range = None;
     let mut pos = 0;
-    while pos + 4 <= input.len() {
-        let float = f32::from_le_bytes(input[pos..pos + 4].try_into().unwrap());
-        if condition(float) {
+    let value_size = size_of::<V>();
+    while pos + value_size <= input.len() {
+        let value = extractor(&input[pos..pos + value_size]);
+        if condition(value) {
             if let None = valid_range {
                 valid_range = Some(&input[pos..]);
             }
@@ -30,8 +36,8 @@ pub fn float_run_proc<F: Fn(f32) -> bool>(
                     pos - (valid_range_unwrapped.as_ptr() as usize - input.as_ptr() as usize);
                 if length >= size_of::<f32>() * min_length {
                     let values = valid_range_unwrapped[..length]
-                        .chunks(4)
-                        .map(|v| f32::from_le_bytes(v.try_into().unwrap()))
+                        .chunks(value_size)
+                        .map(extractor)
                         .collect();
                     return (
                         Some(FloatRun {
@@ -51,8 +57,8 @@ pub fn float_run_proc<F: Fn(f32) -> bool>(
         let length = pos - (valid_range.as_ptr() as usize - input.as_ptr() as usize);
         if length >= size_of::<f32>() * min_length {
             let values = valid_range[..length]
-                .chunks(4)
-                .map(|v| f32::from_le_bytes(v.try_into().unwrap()))
+                .chunks(value_size)
+                .map(extractor)
                 .collect();
             return (
                 Some(FloatRun {
@@ -72,7 +78,7 @@ pub fn float_run<F: Fn(f32) -> bool>(
     input: &[u8],
     min_length: usize,
     condition: F,
-) -> IResult<&[u8], FloatRun, FloatSearchError<&[u8]>> {
+) -> IResult<&[u8], FloatRun<f32>, FloatSearchError<&[u8]>> {
     preceded(
         |x| run_of_invalid_items(x, min_length, &condition),
         consumed(|x| run_of_valid_floats(x, &condition)),

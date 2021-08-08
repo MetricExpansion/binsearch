@@ -181,12 +181,16 @@ fn main_data_search_c(data: &[u8], min: Option<f32>, max: Option<f32>, min_lengt
 }
 
 fn main_data_search_rust(data: &[u8], min: Option<f32>, max: Option<f32>, min_length: usize) {
+    use std::convert::TryInto;
     let mut count = 0;
     let mut remain = data;
     loop {
-        let (value, local_remain) = parser::float_run_proc(remain, min_length, |x| {
-            min.map(|min| x >= min).unwrap_or(true) && max.map(|max| x <= max).unwrap_or(true)
-        });
+        let (value, local_remain) = parser::value_run_proc(
+            remain,
+            |b| f32::from_le_bytes(b.try_into().unwrap()),
+            min_length,
+            |x| min.map(|min| x >= min).unwrap_or(true) && max.map(|max| x <= max).unwrap_or(true),
+        );
         remain = local_remain;
         if let Some(v) = value {
             count += 1;
