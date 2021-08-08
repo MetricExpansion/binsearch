@@ -22,7 +22,7 @@ impl FloatRun {
 pub fn float_run<F: Fn(f32) -> bool>(
     input: &[u8],
     min_length: usize,
-    condition: F
+    condition: F,
 ) -> IResult<&[u8], FloatRun, FloatSearchError<&[u8]>> {
     preceded(
         |x| run_of_invalid_items(x, min_length, &condition),
@@ -39,14 +39,17 @@ pub fn float_run<F: Fn(f32) -> bool>(
     })
 }
 
-fn run_of_valid_floats<F: Fn(f32) -> bool>(input: &[u8], condition: F) -> IResult<&[u8], Vec<f32>, FloatSearchError<&[u8]>> {
+fn run_of_valid_floats<F: Fn(f32) -> bool>(
+    input: &[u8],
+    condition: F,
+) -> IResult<&[u8], Vec<f32>, FloatSearchError<&[u8]>> {
     many1(|x| valid_f32(x, &condition))(input)
 }
 
 fn run_of_invalid_items<F: Fn(f32) -> bool>(
     input: &[u8],
     min_length: usize,
-    condition: F
+    condition: F,
 ) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
     fold_many0(
         alt((
@@ -61,7 +64,7 @@ fn run_of_invalid_items<F: Fn(f32) -> bool>(
 fn optional_too_short_run_of_valid_floats<F: Fn(f32) -> bool>(
     input: &[u8],
     min_length: usize,
-    condition: F
+    condition: F,
 ) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
     many1_count(|x| valid_f32(x, &condition))(input).and_then(|(remaining, length)| {
         if length < min_length {
@@ -72,12 +75,22 @@ fn optional_too_short_run_of_valid_floats<F: Fn(f32) -> bool>(
     })
 }
 
-fn optional_run_of_invalid_floats<F: Fn(f32) -> bool>(input: &[u8], condition: F) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
+fn optional_run_of_invalid_floats<F: Fn(f32) -> bool>(
+    input: &[u8],
+    condition: F,
+) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
     // Use fold with fake init and accumulator because we just want to consume the input and throw it away without heap allocations.
-    fold_many1(preceded(not(|x| valid_f32(x, &condition)), take(4 as usize)), (), |_, _| ())(input)
+    fold_many1(
+        preceded(not(|x| valid_f32(x, &condition)), take(4 as usize)),
+        (),
+        |_, _| (),
+    )(input)
 }
 
-pub fn valid_f32<F: Fn(f32) -> bool>(input: &[u8], condition: F) -> IResult<&[u8], f32, FloatSearchError<&[u8]>> {
+pub fn valid_f32<F: Fn(f32) -> bool>(
+    input: &[u8],
+    condition: F,
+) -> IResult<&[u8], f32, FloatSearchError<&[u8]>> {
     verify(le_f32, |x| condition(*x))(input)
 }
 
