@@ -26,7 +26,7 @@ void search(const unsigned char** found_range, std::size_t* found_len, const uns
             }
         } else {
             if (valid_run_pos) {
-                if ((pos - valid_run_pos) >= (sizeof(float)*min_length)) {
+                if ((unsigned long)(pos - valid_run_pos) >= (sizeof(float)*min_length)) {
                     *found_range = valid_run_pos;
                     *found_len = (pos - valid_run_pos);
                     return;
@@ -38,7 +38,7 @@ void search(const unsigned char** found_range, std::size_t* found_len, const uns
         pos = pos + sizeof(float);
     }
     if (valid_run_pos && pos < end) {
-        if ((pos - valid_run_pos) >= (sizeof(float)*min_length)) {
+        if ((unsigned long)(pos - valid_run_pos) >= (sizeof(float)*min_length)) {
             *found_range = valid_run_pos;
             *found_len = (pos - valid_run_pos);
             return;

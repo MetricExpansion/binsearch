@@ -42,9 +42,9 @@ struct Opt {
 
     #[structopt(
     long,
-    help = "Select to use the simple Rust implementation of the search",
+    help = "Select to use the nom-based implementation of the search",
     )]
-    use_simple: bool,
+    use_nom: bool,
 
     #[structopt(long, default_value = "0", help = "Minimum length of run to print.")]
     min_length: usize,
@@ -103,17 +103,17 @@ fn main() {
     let (counts, v) = count_alloc(|| {
         if opt.use_c {
             main_data_search_c(&*bytes, opt.min, opt.max, opt.min_length);
-        } else if opt.use_simple {
-            main_data_search_rust(&*bytes, opt.min, opt.max, opt.min_length);
+        } else if opt.use_nom {
+            main_data_search_nom(&*bytes, opt.min, opt.max, opt.min_length);
         } else {
-            main_data_search(&*bytes, opt.min, opt.max, opt.min_length);
+            main_data_search_rust(&*bytes, opt.min, opt.max, opt.min_length);
         }
     });
     eprintln!("Allocations: {:?}", counts);
     return v;
 }
 
-fn main_data_search(data: &[u8], min: Option<f32>, max: Option<f32>, min_length: usize) {
+fn main_data_search_nom(data: &[u8], min: Option<f32>, max: Option<f32>, min_length: usize) {
     let mut count = 0;
     let mut it = nom::combinator::iterator(data, move |x| {
         parser::float_run(x, min_length, |x| {
