@@ -19,13 +19,14 @@ impl FloatRun {
         (self.address as usize) - (base as usize)
     }
 }
-pub fn float_run(
+pub fn float_run<F: Fn(f32) -> bool + Clone>(
     input: &[u8],
     min_length: usize,
+    condition: F
 ) -> IResult<&[u8], FloatRun, FloatSearchError<&[u8]>> {
     preceded(
-        |x| run_of_invalid_items(x, min_length),
-        consumed(run_of_valid_floats),
+        |x| run_of_invalid_items(x, min_length, condition.clone()),
+        consumed(|x| run_of_valid_floats(x, condition.clone())),
     )(input)
     .map(|(remain, (consumed, values))| {
         (
@@ -38,29 +39,31 @@ pub fn float_run(
     })
 }
 
-fn run_of_valid_floats(input: &[u8]) -> IResult<&[u8], Vec<f32>, FloatSearchError<&[u8]>> {
-    many1(valid_f32)(input)
+fn run_of_valid_floats<F: Fn(f32) -> bool + Clone>(input: &[u8], condition: F) -> IResult<&[u8], Vec<f32>, FloatSearchError<&[u8]>> {
+    many1(|x| valid_f32(x, condition.clone()))(input)
 }
 
-fn run_of_invalid_items(
+fn run_of_invalid_items<F: Fn(f32) -> bool + Clone>(
     input: &[u8],
     min_length: usize,
+    condition: F
 ) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
     fold_many0(
         alt((
-            |x| optional_too_short_run_of_valid_floats(x, min_length),
-            optional_run_of_invalid_floats,
+            |x| optional_too_short_run_of_valid_floats(x, min_length, condition.clone()),
+            |x| optional_run_of_invalid_floats(x, condition.clone()),
         )),
         (),
         |_, _| (),
     )(input)
 }
 
-fn optional_too_short_run_of_valid_floats(
+fn optional_too_short_run_of_valid_floats<F: Fn(f32) -> bool + Clone>(
     input: &[u8],
     min_length: usize,
+    condition: F
 ) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
-    many1_count(valid_f32)(input).and_then(|(remaining, length)| {
+    many1_count(|x| valid_f32(x, condition.clone()))(input).and_then(|(remaining, length)| {
         if length < min_length {
             Ok((remaining, ()))
         } else {
@@ -69,13 +72,13 @@ fn optional_too_short_run_of_valid_floats(
     })
 }
 
-fn optional_run_of_invalid_floats(input: &[u8]) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
+fn optional_run_of_invalid_floats<F: Fn(f32) -> bool + Clone>(input: &[u8], condition: F) -> IResult<&[u8], (), FloatSearchError<&[u8]>> {
     // Use fold with fake init and accumulator because we just want to consume the input and throw it away without heap allocations.
-    fold_many1(preceded(not(valid_f32), take(4 as usize)), (), |_, _| ())(input)
+    fold_many1(preceded(not(|x| valid_f32(x, condition.clone())), take(4 as usize)), (), |_, _| ())(input)
 }
 
-pub fn valid_f32(input: &[u8]) -> IResult<&[u8], f32, FloatSearchError<&[u8]>> {
-    verify(le_f32, |x| 0.0 < *x)(input)
+pub fn valid_f32<F: Fn(f32) -> bool>(input: &[u8], condition: F) -> IResult<&[u8], f32, FloatSearchError<&[u8]>> {
+    verify(le_f32, |x| condition(*x))(input)
 }
 
 #[derive(Debug, PartialEq)]

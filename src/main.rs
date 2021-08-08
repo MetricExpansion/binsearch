@@ -15,7 +15,7 @@ fn main() {
     // And let's test the parser...
     println!("Searching in {} bytes of data.", bytes.len());
     let mut count = 0;
-    let mut it = nom::combinator::iterator(bytes.as_slice(), |x| parser::float_run(x, 2));
+    let mut it = nom::combinator::iterator(bytes.as_slice(), |x| parser::float_run(x, 2, |x| x > 0.0));
     it.for_each(|v| {
         count += 1;
         println!(
