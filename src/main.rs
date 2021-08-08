@@ -2,10 +2,20 @@ use alloc_counter::{count_alloc, AllocCounterSystem};
 use memmap::{Mmap, MmapOptions};
 use rand::Rng;
 use std::{fs::File, ops::Deref, path::PathBuf};
+use structopt::clap::arg_enum;
 use structopt::StructOpt;
 
 #[global_allocator]
 static A: AllocCounterSystem = AllocCounterSystem;
+
+arg_enum! {
+    #[derive(Debug, StructOpt)]
+    enum Implementation {
+        Rust,
+        Cpp,
+        Nom
+    }
+}
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -34,15 +44,12 @@ struct Opt {
     )]
     max: Option<f32>,
 
-    #[structopt(
-        long,
-        help = "Select to use the C implementation of the search",
-    )]
-    use_c: bool,
+    #[structopt(long, help = "Select an implementation to use. Choices are Rust, Cpp, and Nom.", default_value = "Rust")]
+    use_impl: Implementation,
 
     #[structopt(
-    long,
-    help = "Select to use the nom-based implementation of the search",
+        long,
+        help = "Select to use the nom-based implementation of the search"
     )]
     use_nom: bool,
 
@@ -101,13 +108,17 @@ fn main() {
     // And let's test the parser...
     println!("Searching in {} bytes of data.", bytes.len());
     let (counts, v) = count_alloc(|| {
-        if opt.use_c {
-            main_data_search_c(&*bytes, opt.min, opt.max, opt.min_length);
-        } else if opt.use_nom {
-            main_data_search_nom(&*bytes, opt.min, opt.max, opt.min_length);
-        } else {
-            main_data_search_rust(&*bytes, opt.min, opt.max, opt.min_length);
-        }
+        match opt.use_impl {
+            Implementation::Rust => {
+                main_data_search_rust(&*bytes, opt.min, opt.max, opt.min_length);
+            }
+            Implementation::Cpp => {
+                main_data_search_c(&*bytes, opt.min, opt.max, opt.min_length);
+            }
+            Implementation::Nom => {
+                main_data_search_nom(&*bytes, opt.min, opt.max, opt.min_length);
+            }
+        };
     });
     eprintln!("Allocations: {:?}", counts);
     return v;
@@ -156,7 +167,7 @@ fn main_data_search_c(data: &[u8], min: Option<f32>, max: Option<f32>, min_lengt
                 v.values.len(),
                 v.index_from_base(data.as_ptr()),
                 v.values
-            );    
+            );
         } else {
             break;
         }
@@ -186,6 +197,5 @@ fn main_data_search_rust(data: &[u8], min: Option<f32>, max: Option<f32>, min_le
     }
     println!("Found {} ranges.", count);
 }
-
 
 mod parser;
