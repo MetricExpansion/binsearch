@@ -8,6 +8,46 @@ use nom::sequence::preceded;
 use nom::Err::Error;
 use nom::IResult;
 use floatrun::FloatRun;
+use std::convert::TryInto;
+use std::mem::size_of;
+
+pub fn float_run_proc<F: Fn(f32) -> bool>(
+    input: &[u8],
+    min_length: usize,
+    condition: F,
+) -> (Option<FloatRun>, &[u8]) {
+    let mut valid_range = None;
+    let mut pos = 0;
+    while pos < input.len() {
+        let float = f32::from_le_bytes(input[pos..pos+4].try_into().unwrap());
+        if condition(float) {
+            if let None = valid_range {
+                valid_range = Some(&input[pos..]);
+            }
+        } else {
+            if let Some(valid_range_unwrapped) = valid_range {
+                let length = pos - (valid_range_unwrapped.as_ptr() as usize - input.as_ptr() as usize);
+                if length >= size_of::<f32>()*min_length {
+                    let values = valid_range_unwrapped[..length].chunks(4).map(|v| f32::from_le_bytes(v.try_into().unwrap())).collect();
+                    return (Some(FloatRun{ address: valid_range_unwrapped.as_ptr(), values }), &valid_range_unwrapped[length..])
+                } else {
+                    valid_range = None;
+                }
+            }
+        }
+        pos += size_of::<f32>();
+    };
+    if let Some(valid_range) = valid_range {
+        let length = pos - (valid_range.as_ptr() as usize - input.as_ptr() as usize);
+        if length >= size_of::<f32>()*min_length {
+            let values = valid_range[..length].chunks(4).map(|v| f32::from_le_bytes(v.try_into().unwrap())).collect();
+            return (Some(FloatRun{ address: valid_range.as_ptr(), values }), &valid_range[length..])
+        }
+    } else {
+        // valid_range = None;
+    }
+    (None, input)
+}
 
 pub fn float_run<F: Fn(f32) -> bool>(
     input: &[u8],
