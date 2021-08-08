@@ -34,6 +34,12 @@ struct Opt {
     )]
     max: Option<f32>,
 
+    #[structopt(
+        long,
+        help = "Select to use the C implementation of the search",
+    )]
+    use_c: bool,
+
     #[structopt(long, default_value = "0", help = "Minimum length of run to print.")]
     min_length: usize,
 }
@@ -89,7 +95,11 @@ fn main() {
     // And let's test the parser...
     println!("Searching in {} bytes of data.", bytes.len());
     let (counts, v) = count_alloc(|| {
-        main_data_search(&*bytes, opt.min, opt.max, opt.min_length);
+        if opt.use_c {
+            main_data_search_c(&*bytes, opt.min, opt.max, opt.min_length)
+        } else {
+            main_data_search(&*bytes, opt.min, opt.max, opt.min_length);
+        }
     });
     eprintln!("Allocations: {:?}", counts);
     return v;
@@ -105,7 +115,8 @@ fn main_data_search(data: &[u8], min: Option<f32>, max: Option<f32>, min_length:
     it.for_each(|v| {
         count += 1;
         println!(
-            "Values at {:?}: {:?}",
+            "{} values at {:?}: {:?}",
+            v.values.len(),
             v.index_from_base(data.as_ptr()),
             v.values
         );
@@ -123,5 +134,27 @@ fn main_data_search(data: &[u8], min: Option<f32>, max: Option<f32>, min_length:
         }
     };
 }
+
+fn main_data_search_c(data: &[u8], min: Option<f32>, max: Option<f32>, min_length: usize) {
+    let mut count = 0;
+    let mut remain = data;
+    loop {
+        let (value, local_remain) = cversion::search(remain, min, max, min_length);
+        remain = local_remain;
+        if let Some(v) = value {
+            count += 1;
+            println!(
+                "{} values at {:?}: {:?}",
+                v.values.len(),
+                v.index_from_base(data.as_ptr()),
+                v.values
+            );    
+        } else {
+            break;
+        }
+    }
+    println!("Found {} ranges.", count);
+}
+
 
 mod parser;
